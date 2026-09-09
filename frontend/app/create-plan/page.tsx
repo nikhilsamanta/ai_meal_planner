@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useAuth } from "@/context/AuthContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Link from "next/link";
@@ -42,7 +41,6 @@ const CATEGORIES = [
 ];
 
 export default function CreatePlanPage() {
-  const { user } = useAuth();
   const router = useRouter();
 
   const [basket, setBasket] = useState<GroceryBasketData | null>(null);
@@ -53,7 +51,6 @@ export default function CreatePlanPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>("All");
 
-  // Fetch or suggest initial grocery basket
   const fetchSuggestedBasket = async () => {
     try {
       setLoadingBasket(true);
@@ -75,16 +72,52 @@ export default function CreatePlanPage() {
           data.message || "Failed to generate grocery basket. Make sure dietary preferences are set in profile."
         );
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error fetching grocery basket:", err);
-      setErrorMsg(err.message || "Network error while connecting to server.");
+      const message = err instanceof Error ? err.message : "Network error while connecting to server.";
+      setErrorMsg(message);
     } finally {
       setLoadingBasket(false);
     }
   };
 
   useEffect(() => {
-    fetchSuggestedBasket();
+    let ignore = false;
+    const loadBasket = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/groceries/suggest`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+        });
+
+        const data = await res.json();
+
+        if (ignore) return;
+        if (res.ok && data.success && data.basket) {
+          setBasket(data.basket);
+          setWeeklyBudget(data.weeklyBudget || data.basket.weeklyBudget);
+        } else {
+          setErrorMsg(
+            data.message || "Failed to generate grocery basket. Make sure dietary preferences are set in profile."
+          );
+        }
+      } catch (err: unknown) {
+        if (ignore) return;
+        console.error("Error fetching grocery basket:", err);
+        const message = err instanceof Error ? err.message : "Network error while connecting to server.";
+        setErrorMsg(message);
+      } finally {
+        if (!ignore) {
+          setLoadingBasket(false);
+        }
+      }
+    };
+
+    loadBasket();
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   // Update item in backend & state
@@ -155,7 +188,7 @@ export default function CreatePlanPage() {
         } else {
           setErrorMsg(data.message || "Failed to update item price.");
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Error updating basket item:", err);
         setErrorMsg("Failed to sync item update with server.");
       } finally {
@@ -191,9 +224,10 @@ export default function CreatePlanPage() {
             "Total grocery cost exceeds weekly budget. Adjust quantities or swap items before generating meals."
         );
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error generating meals from basket:", err);
-      setErrorMsg(err.message || "Failed to connect to meal generator server.");
+      const message = err instanceof Error ? err.message : "Failed to connect to meal generator server.";
+      setErrorMsg(message);
     } finally {
       setGeneratingMeals(false);
     }
@@ -302,7 +336,7 @@ export default function CreatePlanPage() {
               )}
               {unpricedItemsCount > 0 && (
                 <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">
-                  💡 {unpricedItemsCount} item(s) unpriced (set prices or check "I have this")
+                  💡 {unpricedItemsCount} item(s) unpriced (set prices or check &quot;I have this&quot;)
                 </span>
               )}
             </div>

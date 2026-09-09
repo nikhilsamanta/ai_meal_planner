@@ -42,29 +42,36 @@ export default function MealPlanPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
+    let ignore = false;
     const fetchMealPlan = async () => {
       try {
-        setLoading(true);
         const res = await fetch(`${API_MEAL_PLAN_URL}/current`, {
           method: "GET",
           credentials: "include",
         });
         const data = await res.json();
 
+        if (ignore) return;
         if (res.ok && data.success && data.mealPlan) {
           setActivePlan(data.mealPlan);
         } else {
           setActivePlan(null);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
+        if (ignore) return;
         console.error("Error loading active meal plan:", err);
         setErrorMsg("Failed to connect to meal plan service.");
       } finally {
-        setLoading(false);
+        if (!ignore) {
+          setLoading(false);
+        }
       }
     };
 
     fetchMealPlan();
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   return (
@@ -115,7 +122,7 @@ export default function MealPlanPage() {
                 No Active Meal Plan Found
               </h2>
               <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6">
-                You haven't generated a weekly meal plan yet. Use our Gemini AI generator on the dashboard to create one based on your preferences.
+                You haven&apos;t generated a weekly meal plan yet. Use our Gemini AI generator on the dashboard to create one based on your preferences.
               </p>
               <Link
                 href="/dashboard"

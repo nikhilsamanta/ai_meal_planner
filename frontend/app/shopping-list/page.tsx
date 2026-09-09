@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useAuth } from "@/context/AuthContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Link from "next/link";
@@ -37,7 +36,6 @@ interface IngredientPrice {
 }
 
 export default function ShoppingListPage() {
-  const { user } = useAuth();
   const [shoppingList, setShoppingList] = useState<ShoppingListData | null>(null);
   const [prices, setPrices] = useState<IngredientPrice[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -50,7 +48,7 @@ export default function ShoppingListPage() {
   const [newPriceUnit, setNewPriceUnit] = useState<string>("kg");
   const [savingPrice, setSavingPrice] = useState<boolean>(false);
 
-  // Fetch shopping list & custom prices on mount
+  // Fetch shopping list & custom prices
   const fetchShoppingList = async () => {
     try {
       setLoading(true);
@@ -66,7 +64,7 @@ export default function ShoppingListPage() {
       } else {
         setShoppingList(null);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error fetching shopping list:", err);
       setErrorMsg("Failed to connect to shopping list service.");
     } finally {
@@ -90,8 +88,49 @@ export default function ShoppingListPage() {
   };
 
   useEffect(() => {
-    fetchShoppingList();
-    fetchCustomPrices();
+    let ignore = false;
+    const loadInitialData = async () => {
+      try {
+        const [listRes, pricesRes] = await Promise.all([
+          fetch(API_SHOPPING_LIST_URL, {
+            method: "GET",
+            credentials: "include",
+          }),
+          fetch(API_PRICES_URL, {
+            method: "GET",
+            credentials: "include",
+          }),
+        ]);
+
+        const listData = await listRes.json();
+        const pricesData = await pricesRes.json();
+
+        if (ignore) return;
+
+        if (listRes.ok && listData.success && listData.shoppingList) {
+          setShoppingList(listData.shoppingList);
+        } else {
+          setShoppingList(null);
+        }
+
+        if (pricesRes.ok && pricesData.success && Array.isArray(pricesData.prices)) {
+          setPrices(pricesData.prices);
+        }
+      } catch (err: unknown) {
+        if (ignore) return;
+        console.error("Error loading shopping list or prices:", err);
+        setErrorMsg("Failed to connect to shopping list service.");
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadInitialData();
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   // Toggle inPantry or purchased flag
