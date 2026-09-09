@@ -42,35 +42,40 @@ export default function Dashboard() {
 
   const [activePlan, setActivePlan] = useState<MealPlanData | null>(null);
   const [loadingPlan, setLoadingPlan] = useState<boolean>(true);
-  const [generating, setGenerating] = useState<boolean>(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-  // Fetch current active meal plan
-  const fetchCurrentPlan = async () => {
-    try {
-      setLoadingPlan(true);
-      setErrorMsg(null);
-      const res = await fetch(`${API_MEAL_PLAN_URL}/current`, {
-        method: "GET",
-        credentials: "include",
-      });
-      const data = await res.json();
-
-      if (res.ok && data.success && data.mealPlan) {
-        setActivePlan(data.mealPlan);
-      } else {
-        setActivePlan(null);
-      }
-    } catch (err) {
-      console.error("Error fetching current meal plan:", err);
-      setActivePlan(null);
-    } finally {
-      setLoadingPlan(false);
-    }
-  };
+  const [generating] = useState<boolean>(false);
+  const [errorMsg] = useState<string | null>(null);
 
   useEffect(() => {
+    let ignore = false;
+    const fetchCurrentPlan = async () => {
+      try {
+        const res = await fetch(`${API_MEAL_PLAN_URL}/current`, {
+          method: "GET",
+          credentials: "include",
+        });
+        const data = await res.json();
+
+        if (ignore) return;
+        if (res.ok && data.success && data.mealPlan) {
+          setActivePlan(data.mealPlan);
+        } else {
+          setActivePlan(null);
+        }
+      } catch (err) {
+        if (ignore) return;
+        console.error("Error fetching current meal plan:", err);
+        setActivePlan(null);
+      } finally {
+        if (!ignore) {
+          setLoadingPlan(false);
+        }
+      }
+    };
+
     fetchCurrentPlan();
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   // Navigate to Grocery-First Create Plan wizard
@@ -160,7 +165,7 @@ export default function Dashboard() {
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h2 className="text-2xl font-extrabold text-zinc-950 dark:text-white">
-                  Today's Meal Snapshot
+                  Today&apos;s Meal Snapshot
                 </h2>
                 <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
                   {activePlan ? `Planned for ${todayMeals?.day || "Today"}` : "No active meal plan found"}
@@ -239,7 +244,7 @@ export default function Dashboard() {
             ) : (
               <div className="text-center py-12 px-4 border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-2xl">
                 <p className="text-zinc-500 dark:text-zinc-400 text-sm mb-4">
-                  You haven't generated a meal plan yet. Click the button above to generate your first AI meal plan!
+                  You haven&apos;t generated a meal plan yet. Click the button above to generate your first AI meal plan!
                 </p>
                 <Link
                   href="/profile"

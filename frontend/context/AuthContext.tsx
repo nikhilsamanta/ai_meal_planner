@@ -77,8 +77,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       setUser(data.user);
       return true;
-    } catch (err: any) {
-      setError(err.message || "Failed to connect to authentication server.");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to connect to authentication server.";
+      setError(message);
       return false;
     } finally {
       setLoading(false);
@@ -107,8 +108,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       setUser(data.user);
       return true;
-    } catch (err: any) {
-      setError(err.message || "Failed to connect to authentication server.");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to connect to authentication server.";
+      setError(message);
       return false;
     } finally {
       setLoading(false);

@@ -113,10 +113,11 @@ export default function Profile() {
           text: data.message || "Failed to save preferences.",
         });
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Network error while saving preferences.";
       setStatusMessage({
         type: "error",
-        text: err.message || "Network error while saving preferences.",
+        text: message,
       });
     } finally {
       setSavingPref(false);
@@ -188,7 +189,7 @@ export default function Profile() {
                   Dietary & Meal Preferences
                 </h2>
                 <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-                  Customize the AI engine's generation constraints for your weekly meal plans.
+                  Customize the AI engine&apos;s generation constraints for your weekly meal plans.
                 </p>
               </div>
 
