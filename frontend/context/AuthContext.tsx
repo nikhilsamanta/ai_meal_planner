@@ -22,7 +22,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const API_URL = "http://localhost:5000/api/auth";
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api") + "/auth";
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -45,7 +45,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser(null);
         }
       } catch (err) {
-        console.error("Error verifying current user session:", err);
+        console.warn("User session check failed (unauthenticated or server unreachable):", err);
         setUser(null);
       } finally {
         setLoading(false);

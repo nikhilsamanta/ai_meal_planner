@@ -9,6 +9,82 @@ const getAiClient = () => {
   return new GoogleGenAI({ apiKey });
 };
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Ordered list of candidate models for resilience against demand spikes (503 / 429)
+const getCandidateModels = () => {
+  const primary = process.env.GEMINI_MODEL || "gemini-3.6-flash";
+  const fallbacks = [
+    "gemini-3.5-flash",
+    "gemini-3.1-flash-lite",
+    "gemini-flash-latest",
+  ];
+  return [primary, ...fallbacks.filter((m) => m !== primary)];
+};
+
+/**
+ * Execute Gemini generateContent with exponential backoff retries and model fallback cascade
+ */
+const generateContentWithRetryAndFallback = async (params, maxRetriesPerModel = 2) => {
+  const ai = getAiClient();
+  const models = getCandidateModels();
+  let lastError;
+
+  for (const model of models) {
+    for (let attempt = 1; attempt <= maxRetriesPerModel; attempt++) {
+      try {
+        const response = await ai.models.generateContent({
+          ...params,
+          model,
+        });
+
+        if (response && response.text) {
+          return response;
+        }
+      } catch (error) {
+        lastError = error;
+        const errMsg = error.message || String(error);
+        const isTransient =
+          error.status === 503 ||
+          error.status === 429 ||
+          errMsg.includes("503") ||
+          errMsg.includes("429") ||
+          errMsg.includes("high demand") ||
+          errMsg.includes("UNAVAILABLE") ||
+          errMsg.includes("RESOURCE_EXHAUSTED");
+
+        console.warn(
+          `[Gemini AI] Model ${model} (attempt ${attempt}/${maxRetriesPerModel}) failed: ${errMsg}`
+        );
+
+        if (isTransient && attempt < maxRetriesPerModel) {
+          const backoffDelay = attempt * 1500;
+          await sleep(backoffDelay);
+          continue; // Retry same model
+        }
+
+        // Move to next candidate model in cascade
+        break;
+      }
+    }
+  }
+
+  // If all models in the cascade failed, throw a clean, informative error
+  const detailedMsg = lastError?.message || "Unknown error";
+  if (
+    lastError?.status === 503 ||
+    detailedMsg.includes("503") ||
+    detailedMsg.includes("high demand") ||
+    detailedMsg.includes("UNAVAILABLE")
+  ) {
+    throw new Error(
+      "Gemini AI models are currently experiencing temporary high demand across all fallback models. Please try again in a few moments."
+    );
+  }
+
+  throw lastError;
+};
+
 // Schema for Phase 1: Array of { name, quantity, unit, category }
 const groceryBasketResponseSchema = {
   type: Type.ARRAY,
@@ -106,9 +182,7 @@ const suggestGroceryBasket = async (preferences = {}) => {
 
     const userPrompt = `Generate a 7-day weekly grocery basket of raw ingredients for family size ${familySize}. Cuisine: ${cuisine}, Diet: ${diet}, Protein Goal: ${proteinGoal}. Exclude dislikes: ${dislikedText}, Allergies: ${allergiesText}.`;
 
-    const ai = getAiClient();
-    const response = await ai.models.generateContent({
-      model: process.env.GEMINI_MODEL || "gemini-3.6-flash",
+    const response = await generateContentWithRetryAndFallback({
       contents: userPrompt,
       config: {
         systemInstruction,
@@ -201,9 +275,7 @@ const generateMealsFromPricedBasket = async (preferences = {}, groceryItems = []
       sanitizedBasket
     )}.`;
 
-    const ai = getAiClient();
-    const response = await ai.models.generateContent({
-      model: process.env.GEMINI_MODEL || "gemini-3.6-flash",
+    const response = await generateContentWithRetryAndFallback({
       contents: userPrompt,
       config: {
         systemInstruction,

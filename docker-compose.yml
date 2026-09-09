@@ -1,0 +1,57 @@
+services:
+  # 1. Database
+  mongodb:
+    image: mongo:7.0
+    container_name: mealplanner-db
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - mealplanner-net
+
+  # 2. Express Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mealplanner-api
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - NODE_ENV=production
+      - MONGO_URI=mongodb://mongodb:27017/mealplanner
+      - JWT_SECRET=${JWT_SECRET:-your_super_secret_meal_planner_key_987654321}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-3.6-flash}
+      - CLIENT_URL=http://localhost:3000
+    depends_on:
+      - mongodb
+    networks:
+      - mealplanner-net
+
+  # 3. Next.js Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=http://localhost:5000/api
+    container_name: mealplanner-web
+    restart: always
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - mealplanner-net
+
+volumes:
+  mongo_data:
+
+networks:
+  mealplanner-net:
+    driver: bridge
