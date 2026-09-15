@@ -87,7 +87,7 @@ jobs:
         with:
           context: ./backend
           file: ./backend/Dockerfile
-          push: false
+          push: true
           tags: mealplanner-api:ci-test
 
       - name: Build Frontend Image
