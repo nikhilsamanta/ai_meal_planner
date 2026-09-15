@@ -99,3 +99,12 @@ jobs:
             NEXT_PUBLIC_API_URL=http://localhost:5000/api
           push: false
           tags: mealplanner-web:ci-test
+
+      - name: Scan Backend Image for Vulnerabilities
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: mealplanner-api:ci-test
+          format: 'table'
+          exit-code: '0' # Set to '1' if you want high-severity CVEs to block the build
+          ignore-unfixed: true
+          severity: 'CRITICAL,HIGH'

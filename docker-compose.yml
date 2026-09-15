@@ -1,5 +1,4 @@
 services:
-  # 1. Database
   mongodb:
     image: mongo:7.0
     container_name: mealplanner-db
@@ -10,6 +9,12 @@ services:
       - mongo_data:/data/db
     networks:
       - mealplanner-net
+    healthcheck:
+      test: [ "CMD", "mongosh", "--eval", "db.adminCommand('ping')" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   # 2. Express Backend
   backend:
@@ -29,7 +34,8 @@ services:
       - GEMINI_MODEL=${GEMINI_MODEL:-gemini-3.6-flash}
       - CLIENT_URL=http://localhost:3000
     depends_on:
-      - mongodb
+      mongodb:
+        condition: service_healthy
     networks:
       - mealplanner-net
 
