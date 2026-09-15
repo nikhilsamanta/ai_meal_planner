@@ -87,6 +87,7 @@ jobs:
         with:
           context: ./backend
           file: ./backend/Dockerfile
+          load: true
           push: false
           tags: mealplanner-api:ci-test
 
