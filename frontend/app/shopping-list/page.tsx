@@ -6,8 +6,11 @@ import Footer from "@/components/Footer";
 import Link from "next/link";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
-const API_SHOPPING_LIST_URL = "http://localhost:5000/api/shopping-list";
-const API_PRICES_URL = "http://localhost:5000/api/prices";
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+
+const API_SHOPPING_LIST_URL = `${API_BASE}/shopping-list`;
+const API_PRICES_URL = `${API_BASE}/prices`;
 
 interface ShoppingItem {
   _id: string;

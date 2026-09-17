@@ -7,7 +7,8 @@ import Footer from "@/components/Footer";
 import Link from "next/link";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
-const API_PREFERENCES_URL = "http://localhost:5000/api/preferences";
+const API_PREFERENCES_URL =
+  `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"}/preferences`;
 
 export default function Profile() {
   const { user } = useAuth();

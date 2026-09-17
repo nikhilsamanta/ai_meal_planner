@@ -7,7 +7,8 @@ import Footer from "@/components/Footer";
 import Link from "next/link";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
-const API_MEAL_PLAN_URL = "http://localhost:5000/api/meal-plan";
+const API_MEAL_PLAN_URL =
+  `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"}/meal-plan`;
 
 interface Ingredient {
   name: string;
