@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  database:
+    image: mongo:6.0
+    container_name: mealplanner-db-prod
+    restart: always
+    environment:
+      MONGO_INITDB_DATABASE: mealplanner
+    volumes:
+      - mongo_prod_data:/data/db
+    networks:
+      - mealplanner-network
+    healthcheck:
+      test: [ "CMD", "mongosh", "--eval", "db.adminCommand('ping')" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  backend:
+    image: ghcr.io/nikhilsamanta/ai_meal_planner/backend:latest
+    container_name: mealplanner-api-prod
+    restart: always
+    depends_on:
+      database:
+        condition: service_healthy
+    environment:
+      PORT: 5000
+      NODE_ENV: production
+      MONGO_URI: mongodb://database:27017/mealplanner
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      JWT_SECRET: ${JWT_SECRET}
+    ports:
+      - "5000:5000"
+    networks:
+      - mealplanner-network
+
+  frontend:
+    image: ghcr.io/nikhilsamanta/ai_meal_planner/frontend:latest
+    container_name: mealplanner-web-prod
+    restart: always
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+    networks:
+      - mealplanner-network
+
+networks:
+  mealplanner-network:
+    driver: bridge
+
+volumes:
+  mongo_prod_data:
+    driver: local

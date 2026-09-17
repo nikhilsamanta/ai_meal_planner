@@ -32,3 +32,8 @@ Thumbs.db
 # Testing & Temporary Scripts
 test_runner.js
 *.tmp
+
+
+.env
+.env.prod
+.env.local

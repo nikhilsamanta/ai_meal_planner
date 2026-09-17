@@ -59,7 +59,7 @@ jobs:
         run: npm run build
         working-directory: ./frontend
         env:
-          NEXT_PUBLIC_API_URL: http://localhost:5000/api
+          NEXT_PUBLIC_API_URL: /api
 
   docker-build-and-push:
     name: Docker Build, Scan & GHCR Publish
@@ -136,4 +136,4 @@ jobs:
           tags: ${{ steps.meta-frontend.outputs.tags }}
           labels: ${{ steps.meta-frontend.outputs.labels }}
           build-args: |
-            NEXT_PUBLIC_API_URL=http://localhost:5000/api
+            NEXT_PUBLIC_API_URL=/api
