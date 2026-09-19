@@ -4,6 +4,9 @@ const cookieParser = require("cookie-parser");
 
 const app = express();
 
+// Trust reverse proxy (e.g. Nginx) headers for accurate protocol and IP detection
+app.set("trust proxy", 1);
+
 // Configure Middleware
 const allowedOrigins = [
   "http://localhost:3000",

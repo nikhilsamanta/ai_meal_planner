@@ -46,9 +46,14 @@ const register = async (req, res) => {
     const token = generateToken(user._id);
 
     // 5. Set JWT token in HttpOnly cookie
+    const isSecure =
+      process.env.COOKIE_SECURE === "true" ||
+      req.secure ||
+      req.headers["x-forwarded-proto"] === "https";
+
     res.cookie("token", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production", // true in production (requires HTTPS)
+      secure: isSecure,
       sameSite: "lax", // prevents CSRF attacks
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
     });
@@ -112,9 +117,14 @@ const login = async (req, res) => {
     const token = generateToken(user._id);
 
     // 5. Set JWT token in HttpOnly cookie
+    const isSecure =
+      process.env.COOKIE_SECURE === "true" ||
+      req.secure ||
+      req.headers["x-forwarded-proto"] === "https";
+
     res.cookie("token", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: isSecure,
       sameSite: "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
@@ -144,9 +154,14 @@ const login = async (req, res) => {
  */
 const logout = async (req, res) => {
   try {
+    const isSecure =
+      process.env.COOKIE_SECURE === "true" ||
+      req.secure ||
+      req.headers["x-forwarded-proto"] === "https";
+
     res.clearCookie("token", {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: isSecure,
       sameSite: "lax",
     });
 
