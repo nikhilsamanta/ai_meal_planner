@@ -137,3 +137,34 @@ jobs:
           labels: ${{ steps.meta-frontend.outputs.labels }}
           build-args: |
             NEXT_PUBLIC_API_URL=/api
+
+
+  deploy:
+    name: Deploy to EC2
+    runs-on: ubuntu-latest
+    needs: docker-build-and-push
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd ~/ai-meal-planner
+
+            echo "Pulling latest Docker images..."
+            docker compose --env-file .env.prod -f docker-compose.prod.yml pull
+
+            echo "Starting updated containers..."
+            docker compose --env-file .env.prod -f docker-compose.prod.yml up -d
+
+            echo "Checking running containers..."
+            docker ps
+
+            echo "Checking backend health..."
+            curl -f http://localhost:5000/health
+
+            echo "Deployment successful!"     
