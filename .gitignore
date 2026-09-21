@@ -37,3 +37,5 @@ test_runner.js
 .env
 .env.prod
 .env.local
+
+*.pem
