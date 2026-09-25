@@ -152,14 +152,49 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
+          # Previous deployment script kept for reference:
+          # script: |
+          #   cd ~/ai-meal-planner
+          #   echo "Pulling latest Docker images..."
+          #   docker compose --env-file .env.prod -f docker-compose.prod.yml pull
+          #   echo "Starting updated containers..."
+          #   docker compose --env-file .env.prod -f docker-compose.prod.yml up -d
+          #   docker ps
+          #   echo "Checking backend health..."
+          #   curl -f http://localhost:5000/health
+          #   echo "Deployment successful!"
+
           script: |
             cd ~/ai-meal-planner
 
+            echo "Retrieving production secrets from AWS Secrets Manager..."
+
+            SECRET_JSON="$(aws secretsmanager get-secret-value \
+              --secret-id ai-meal-planner/production \
+              --region ap-south-1 \
+              --query SecretString \
+              --output text)"
+
+            export JWT_SECRET="$(echo "$SECRET_JSON" | jq -r '.JWT_SECRET')"
+            export GEMINI_API_KEY="$(echo "$SECRET_JSON" | jq -r '.GEMINI_API_KEY')"
+
+            if [ -z "$JWT_SECRET" ] || [ "$JWT_SECRET" = "null" ]; then
+              echo "ERROR: JWT_SECRET was not retrieved"
+              exit 1
+            fi
+
+            if [ -z "$GEMINI_API_KEY" ] || [ "$GEMINI_API_KEY" = "null" ]; then
+              echo "ERROR: GEMINI_API_KEY was not retrieved"
+              exit 1
+            fi
+
+            echo "Production secrets retrieved successfully."
+
             echo "Pulling latest Docker images..."
-            docker compose --env-file .env.prod -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml pull
 
             echo "Starting updated containers..."
-            docker compose --env-file .env.prod -f docker-compose.prod.yml up -d
+            docker compose -f docker-compose.prod.yml up -d
 
             echo "Checking running containers..."
             docker ps
@@ -167,4 +202,4 @@ jobs:
             echo "Checking backend health..."
             curl -f http://localhost:5000/health
 
-            echo "Deployment successful!"     
+            echo "Deployment successful!"
